@@ -1,0 +1,30 @@
+# Core
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
+pydantic==2.13.5
+pydantic-settings==2.15.0
+sqlalchemy==2.0.52
+httpx
+
+# PostgreSQL (optional; SQLite used by default)
+psycopg2-binary
+
+# Computer Vision
+opencv-python
+numpy
+Pillow
+scikit-image
+scipy
+
+# OCR - RapidOCR (ONNX PaddleOCR port, lightweight alternative)
+rapidocr-onnxruntime
+# OCR fallback - EasyOCR (PyTorch-based)
+easyocr
+
+# Face Verification - InsightFace (ArcFace)
+insightface
+onnxruntime
+
+# Optional legacy OCR fallback (requires Tesseract binary)
+pytesseract

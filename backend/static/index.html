@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Document Screening System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <div>
+                    <h1>DocGuard AI</h1>
+                    <p>Document Screening</p>
+                </div>
+            </div>
+            <nav>
+                <button class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span> Dashboard
+                </button>
+                <button class="nav-item" data-page="screening">
+                    <span class="nav-icon">🔍</span> New Screening
+                </button>
+                <button class="nav-item" data-page="history">
+                    <span class="nav-icon">📋</span> Screening History
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>API: <span id="api-status">Checking...</span></span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <section id="page-dashboard" class="page active">
+                <header class="page-header">
+                    <h2>Dashboard</h2>
+                    <p>Real-time screening overview</p>
+                </header>
+                <div class="stats-grid" id="dashboard-stats">
+                    <div class="stat-card">
+                        <h3 id="stat-total">0</h3>
+                        <p>Total Documents</p>
+                    </div>
+                    <div class="stat-card flagged">
+                        <h3 id="stat-flagged">0</h3>
+                        <p>Flagged</p>
+                    </div>
+                    <div class="stat-card high-risk">
+                        <h3 id="stat-high-risk">0</h3>
+                        <p>High Risk</p>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="chart-card">
+                        <h3>Documents by Type</h3>
+                        <div id="chart-type" class="chart-container"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Risk Distribution</h3>
+                        <div id="chart-risk" class="chart-container"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screening Page -->
+            <section id="page-screening" class="page">
+                <header class="page-header">
+                    <h2>New Document Screening</h2>
+                    <p>Upload an identity document for analysis</p>
+                </header>
+                <div class="screening-container">
+                    <form id="screening-form">
+                        <div class="form-group">
+                            <label for="document-type">Document Type</label>
+                            <select id="document-type" required>
+                                <option value="">Select document type...</option>
+                                <option value="passport">Passport</option>
+                                <option value="visa">Visa</option>
+                                <option value="national_id">National ID</option>
+                                <option value="driving_license">Driving License</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="file-input">Document Image</label>
+                            <div class="upload-area" id="upload-area">
+                                <input type="file" id="file-input" accept="image/*" hidden>
+                                <div class="upload-content" id="upload-content">
+                                    <span class="upload-icon">📄</span>
+                                    <p>Drag & drop or click to upload</p>
+                                    <span class="upload-hint">Supported: JPG, PNG (max 10MB)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="button primary" id="screen-btn">
+                            <span class="btn-text">Start Screening</span>
+                            <span class="spinner hidden"></span>
+                        </button>
+                    </form>
+                </div>
+                <div id="screening-results" class="hidden"></div>
+            </section>
+
+            <!-- History Page -->
+            <section id="page-history" class="page">
+                <header class="page-header">
+                    <h2>Screening History</h2>
+                    <p>All processed documents</p>
+                </header>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Filename</th>
+                                <th>Date</th>
+                                <th>Risk</th>
+                                <th>Tampering</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Result Detail Modal -->
+    <div id="result-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detailed Screening Result</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

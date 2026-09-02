@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: docguard-db
+    environment:
+      POSTGRES_USER: docguard
+      POSTGRES_PASSWORD: docguard
+      POSTGRES_DB: docguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: docguard-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://docguard:docguard@postgres:5432/docguard
+      DEBUG: "false"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: docguard-frontend
+    environment:
+      API_BASE_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
