@@ -1,139 +1,195 @@
-# HOW TO RUN THIS PROGRAM ON YOUR MACHINE (Windows)
+# DocGuard AI — Identity & Document Screening System
 
-This guide walks you through getting the AI Document Screening System running.
-
----
-
-## WHAT YOU NEED
-
-| Tool | Status on your machine | Needed for |
-|------|----------------------|-----------|
-| Python 3.13 | ✅ Already installed | Backend (FastAPI + AI) |
-| Node.js + npm | ❌ NOT installed | Frontend (Next.js) |
-| Tesseract OCR | Optional | Extra OCR fallback (not required) |
+An AI-powered border-control platform that screens identity documents (passports,
+visas, national IDs, driving licenses), extracts data via OCR, validates against
+ICAO/MRZ rules, detects tampering, verifies faces, and outputs a risk score.
 
 ---
 
-## STEP 1 — Install Node.js (one time)
+## Tech Stack & Requirements
 
-The web interface needs Node.js which is NOT on your machine yet.
+| Layer | Technology | Requirement |
+|-------|-----------|-------------|
+| Frontend | Next.js 14 + TypeScript + Tailwind + shadcn/ui | **Node.js ≥ 18** + npm |
+| Backend | FastAPI + Python | **Python 3.9–3.12** (64-bit) |
+| OCR | RapidOCR (ONNX PaddleOCR port) + MRZ parser + ICAO 9303 checksum | `rapidocr-onnxruntime` |
+| Tampering | OpenCV + Error Level Analysis (ELA) | `opencv-python` |
+| Face | InsightFace (ArcFace) + OpenCV fallback | `insightface`, `onnxruntime` |
+| Database | PostgreSQL + SQLAlchemy (SQLite in dev) | `psycopg2-binary` (SQLite works with zero config) |
+| Deployment | Docker / docker-compose | Docker Desktop (optional) |
 
-1. Go to: https://nodejs.org
-2. Download the **LTS** version (left button, e.g. "20.x LTS")
-3. Run the installer — click Next/Next/Install (accept defaults)
-4. Restart your terminal / PowerShell
+### Minimum Requirements
+- **Python 3.9+** — backend (tested on 3.12/3.13)
+- **Node.js ≥ 18 + npm** — frontend (tested on Node 20 LTS)
+- ~2–4 GB free disk (ML model/package downloads)
 
-Verify it worked:
-```
-node --version
-npm --version
-```
-You should see version numbers, not errors.
+> **Note:** RapidOCR requires no external binaries (ONNX Runtime). The optional
+> `pytesseract` fallback additionally needs the [Tesseract OCR binary](https://github.com/UB-Mannheim/tesseract/wiki)
+> installed and in PATH — but it is NOT required; RapidOCR does the work.
 
 ---
 
-## STEP 2 — Run the BACKEND
-
-The backend does all the AI work (OCR, tampering detection, MRZ checksum, risk scoring).
-
-Open PowerShell, then:
+## Project Structure
 
 ```
-cd "C:\Users\ashuk\OneDrive\ドキュメント\Default Project\backend"
+Default Project/
+├── backend/                 # FastAPI application
+│   ├── app/
+│   │   ├── main.py          # App entry point (serves API + built-in UI)
+│   │   ├── config.py        # Settings (DB URL, weights, etc.)
+│   │   ├── database.py      # SQLAlchemy models + session
+│   │   ├── api/screening.py # REST endpoints
+│   │   ├── modules/
+│   │   │   ├── document_ocr.py      # Module 1: OCR + MRZ
+│   │   │   ├── mrz_parser.py        # ICAO 9303 MRZ + checksum
+│   │   │   ├── document_validator.py# Module 2: validation
+│   │   │   ├── tampering_detector.py# Module 3: ELA + OpenCV
+│   │   │   └── face_verifier.py     # Module 4: InsightFace
+│   │   └── services/risk_scorer.py  # weighted risk engine
+│   ├── static/              # Built-in web UI
+│   ├── uploads/             # processed document images
+│   ├── requirements.txt
+│   ├── start.bat            # one-click backend launcher (Windows)
+│   └── Dockerfile
+├── frontend/                # Next.js app
+│   ├── app/                 # routes (dashboard, screening, history)
+│   ├── components/          # shadcn/ui + feature components
+│   ├── services/api.ts      # REST client
+│   ├── package.json
+│   ├── .env.example
+│   └── Dockerfile
+├── docker-compose.yml       # Postgres + backend + frontend
+└── RUN_GUIDE.md
+```
+
+---
+
+## Option A — Run backend with built-in web UI (simplest, no Node)
+
+The backend serves a complete web interface by itself, so you can use the app
+without installing Node.js at all.
+
+### 1. Install Python dependencies
+```bash
+cd backend
+
+# Create & activate a virtual environment (recommended on all machines)
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 2. Start the backend
+```bash
 python -m uvicorn app.main:app --reload
 ```
 
-You should see output ending with:
-`Uvicorn running on http://127.0.0.1:8000`
+**Windows one-click alternative:** double-click `start.bat`. The script is
+portable — it automatically uses a local `venv` if present, or falls back to
+whatever `python` is on PATH, and offers to install the dependencies if they
+are missing. So it works on any teammate's machine without editing anything.
 
-**Leave this window OPEN and running.**
-
-You can verify it's alive by opening http://127.0.0.1:8000/health in your browser — it should show `{"status":"healthy"}`.
-
-> Note: I already installed the Python packages (fastapi, opencv, rapidocr, sqlalchemy, etc.) for you earlier, so this should just work. If you ever get "ModuleNotFoundError", run:
-> ```
-> pip install -r requirements.txt
-> ```
+### 3. Use it
+Open **http://localhost:8000** in your browser.
 
 ---
 
-## STEP 3 — Run the FRONTEND (requires Node.js from Step 1)
+## Option B — Run full stack (backend + Next.js frontend)
 
-Open a SECOND PowerShell window, then:
+This gives you the richer Next.js/TypeScript UI on port 3000.
 
-```
-cd "C:\Users\ashuk\OneDrive\ドキュメント\Default Project\frontend"
+### 1. Start the backend (from Option A, step 1–2)
+Keep this terminal running in the `backend` folder.
+
+### 2. Install & start the frontend (separate terminal)
+```bash
+cd frontend
 npm install
+# configure the API base URL it proxies to (default http://localhost:8000)
+cp .env.example .env.local
 npm run dev
 ```
 
-The first `npm install` downloads all frontend packages (takes a few minutes first time).
+### 3. Use it
+Open **http://localhost:3000**.
 
-When done you'll see:
-`Ready in ...` and `http://localhost:3000`
-
----
-
-## STEP 4 — USE IT
-
-1. Open your browser to **http://localhost:3000**  ← the web interface
-2. Go to **"New Screening"**
-3. Pick a document type (Passport, Visa, National ID, Driving License)
-4. Upload an image of the document, click **"Start Screening"**
-
-You'll see the AI analysis:
-- Extracted data (name, passport number, DOB, etc.)
-- Doc validation (incl. MRZ checksum check)
-- Tampering score
-- Face match
-- Final **risk score** and **risk level** (low/medium/high/critical)
-
-The **Dashboard** shows stats, and **Screening History** lists everything processed.
+> Both servers must run together. The frontend proxies `/api/*` to the backend
+> (set in `next.config.js` / `.env.local` via `API_BASE_URL`).
 
 ---
 
-## QUICK START ALTERNATIVE (backend + built-in web UI)
+## Option C — Docker (PostgreSQL + backend + frontend)
 
-If you DON'T want to install Node.js right now, there's a simpler path —
-the backend already includes a built-in web interface at:
+If you have Docker Desktop, one command runs everything:
 
-```
-http://localhost:8000
-```
-
-Just run Step 2 and open http://localhost:8000 — you get the same Dashboard,
-Screening, and History, served directly by the backend (no Node needed).
-
-Do Step 1–4 if you want the prettier Next.js interface.
-
----
-
-## COMMON PROBLEMS
-
-**"python is not recognized"**
-→ Python isn't in PATH. Reinstall Python and tick "Add Python to PATH".
-
-**"ModuleNotFoundError: No module named 'fastapi'"**
-→ `pip install -r requirements.txt` (run in the `backend` folder)
-
-**Port already in use**
-→ Change ports:
-   - Backend: use `--port 8001`
-   - Frontend: next.config.js uses `API_BASE_URL=http://localhost:8000` — update to match
-
-**Frontend can't reach backend**
-→ Make sure the backend (Step 2) is still running, and both use the same host.
-   The frontend proxies `/api` to `http://localhost:8000`.
-
----
-
-## DOCKER (optional, if you have Docker Desktop)
-
-If Docker is installed, the whole system (PostgreSQL + backend + frontend) starts with:
-
-```
-cd "C:\Users\ashuk\OneDrive\ドキュメント\Default Project"
+```bash
+cd "Default Project"
 docker-compose up --build
 ```
 
-Frontend: http://localhost:3000   Backend: http://localhost:8000
+- Frontend: **http://localhost:3000**
+- Backend: **http://localhost:8000**
+- PostgreSQL on port 5432 (user/pass/db = `docguard`)
+
+---
+
+## Using the App
+
+1. Open the Dashboard — shows totals, flagged, high-risk, and charts.
+2. Go to **New Screening** → pick a document type → upload an image → **Start Screening**.
+3. Review the result:
+   - **Extracted data** (name, numbers, nationality, DOB, expiry, gender)
+   - **Validation** (incl. MRZ ICAO 9303 checksum — detects forged number/date/expiry)
+   - **Tampering** score (ELA + copy-move + stamp + metadata)
+   - **Face match** (document vs live photo, if provided)
+   - **Risk score** 0–100 and level (Low / Medium / High / Critical)
+4. Browse **Screening History** and open detailed results.
+
+### API Reference
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/screening/documents?document_type=passport` | Upload + screen a document (multipart `file`) |
+| GET | `/api/screening/results` | All screening records |
+| GET | `/api/screening/{id}` | One screening record |
+| GET | `/api/dashboard/stats` | Dashboard statistics |
+| POST | `/api/screening/{id}/decision` | Approve/reject a document |
+| GET | `/health` | Health check |
+
+---
+
+## Configuration
+
+Settings live in `backend/app/config.py` and can be overridden via environment
+variables or a `.env` file in `backend/`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///./screening.db` | Set to `postgresql://user:pass@host/db` for Postgres |
+| `TAMPERING_WEIGHT` | `0.4` | Risk weight for tampering |
+| `VALIDATION_WEIGHT` | `0.3` | Risk weight for validation |
+| `FACE_MATCH_WEIGHT` | `0.3` | Risk weight for face match |
+| `UPLOAD_DIR` | `uploads` | Where document images are stored |
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `python: No module named uvicorn` | You may have multiple Pythons. Activate the venv (`venv\Scripts\activate`) or use the interpreter that has the packages. On Windows, `start.bat` auto-selects the right interpreter. |
+| `ModuleNotFoundError: ...` | Run `pip install -r requirements.txt` inside the backend venv. |
+| Port already in use | Backend: use `--port 8001`. Update frontend `API_BASE_URL`/`next.config.js` to match. |
+| Frontend shows no styles | Be sure the URL paths are correct. Built-in UI loads `/static/styles.css`. |
+| Frontend can't reach backend | Backend must be running (Option A step 2). Check `API_BASE_URL` in `.env.local`. |
+| Slow first OCR run | RapidOCR downloads ONNX models on first use; subsequent runs are fast. |
+| `tesseract is not installed` | Ignore — that's only the optional fallback. RapidOCR handles OCR. |
+
+---
+
+## License / Notes
+Built as a prototype for AI-based identity document screening. For production,
+add TLS, a real operator-auth layer, and strict data retention controls.
