@@ -1,39 +1,31 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 REM ============================================================
 REM  DocGuard AI - Backend launcher (works on any developer machine)
 REM
 REM  Behavior:
-REM    1. Uses a local virtual environment (venv) if one exists.
-REM    2. Otherwise uses the first available 'python' on PATH.
-REM    3. If required packages are missing, offers to install them.
+REM    1. Finds a Python interpreter (venv first, then PATH).
+REM    2. If required packages are missing, offers to install them.
+REM    3. Starts the FastAPI backend.
 REM ============================================================
 
 cd /d "%~dp0"
 
 REM ---- 1. Find a Python interpreter -----------------------------------
-set "PYTHON="
-
-REM Prefer a local virtual environment
-if exist "venv\Scripts\python.exe" set "PYTHON=venv\Scripts\python.exe"
-if exist ".venv\Scripts\python.exe" set "PYTHON=.venv\Scripts\python.exe"
-
-REM Otherwise use whatever 'python' is on PATH
-if not defined PYTHON (
+if exist "venv\Scripts\python.exe" (
+    set "PYTHON=venv\Scripts\python.exe"
+) else if exist ".venv\Scripts\python.exe" (
+    set "PYTHON=.venv\Scripts\python.exe"
+) else (
     where python >nul 2>nul
-    if not errorlevel 1 (
-        if exist "venv\Scripts\python.exe" (set "PYTHON=venv\Scripts\python.exe") else (
-            set "PYTHON=python"
-        )
+    if errorlevel 1 (
+        echo [ERROR] Python was not found.
+        echo Install Python 3.9+ from https://python.org and re-run this script.
+        echo Or create a venv first:  python -m venv venv
+        pause
+        exit /b 1
     )
-)
-
-if not defined PYTHON (
-    echo [ERROR] Python was not found.
-    echo Install Python 3.9+ from https://python.org and re-run this script.
-    echo If using a venv, create it first:  python -m venv venv
-    pause
-    exit /b 1
+    set "PYTHON=python"
 )
 
 echo Using Python: %PYTHON%
@@ -44,7 +36,7 @@ if errorlevel 1 (
     echo.
     echo [INFO] Required packages are not installed in this environment.
     set /p INSTALL="Install them with pip now? (y/n): "
-    if /i "%INSTALL%"=="y" (
+    if /I "!INSTALL!"=="y" (
         echo Installing dependencies...
         "%PYTHON%" -m pip install -r requirements.txt
         if errorlevel 1 (
