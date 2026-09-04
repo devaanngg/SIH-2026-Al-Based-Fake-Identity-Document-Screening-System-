@@ -28,6 +28,7 @@ export default function ScreeningPage() {
   const router = useRouter();
   const [documentType, setDocumentType] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [livePhoto, setLivePhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DocumentRecord | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -37,7 +38,7 @@ export default function ScreeningPage() {
     if (!documentType || !file || loading) return;
     setLoading(true);
     try {
-      const res = await screenDocument(documentType, file);
+      const res = await screenDocument(documentType, file, livePhoto);
       const detail = await getScreeningResult(res.document_id);
       setResult(detail);
       router.refresh();
@@ -80,6 +81,19 @@ export default function ScreeningPage() {
                   <SelectItem value="driving_license">Driving License</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="live-photo">Live Photo (optional face verification)</Label>
+              <Input
+                id="live-photo"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLivePhoto(e.target.files?.[0] || null)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {livePhoto ? `${livePhoto.name} selected` : "Upload a current face photo to compare against the document portrait."}
+              </p>
             </div>
 
             <div className="space-y-2">

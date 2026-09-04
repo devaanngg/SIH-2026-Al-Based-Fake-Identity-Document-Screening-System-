@@ -29,7 +29,9 @@ def save_upload_file(upload: UploadFile) -> tuple[str, str]:
     os.makedirs("uploads", exist_ok=True)
     
     # Generate unique filename
-    ext = os.path.splitext(upload.filename or "")[1] or ".jpg"
+    ext = os.path.splitext(upload.filename or "")[1].lower() or ".jpg"
+    if ext not in {".jpg", ".jpeg", ".png", ".webp"}:
+        raise HTTPException(status_code=400, detail="Supported image formats: JPG, PNG, WEBP")
     unique_name = f"{uuid.uuid4().hex}{ext}"
     file_path = os.path.join("uploads", unique_name)
     
@@ -58,6 +60,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     document_type: str,
     file: UploadFile = File(...),
+    live_photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     """Upload and screen a document."""
@@ -69,9 +72,14 @@ async def upload_document(
     # Validate file type
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
+    if live_photo and (not live_photo.content_type or not live_photo.content_type.startswith("image/")):
+        raise HTTPException(status_code=400, detail="Live photo must be an image")
     
     # Save file
     file_path, original_name = save_upload_file(file)
+    live_photo_path = None
+    if live_photo:
+        live_photo_path, _ = save_upload_file(live_photo)
     
     # Create record
     from app.database import DocumentRecord
@@ -92,7 +100,7 @@ async def upload_document(
     
     # Process synchronously (in production, use background tasks)
     try:
-        result = screen_document(record.id, file_path, document_type, db)
+        result = screen_document(record.id, file_path, document_type, db, live_photo_path)
         return DocumentUploadResponse(
             document_id=record.id,
             filename=original_name,
@@ -107,7 +115,13 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
 
 
-def screen_document(document_id: int, file_path: str, document_type: str, db: Session) -> DocumentRecordResponse:
+def screen_document(
+    document_id: int,
+    file_path: str,
+    document_type: str,
+    db: Session,
+    live_photo_path: Optional[str] = None,
+) -> DocumentRecordResponse:
     """Complete document screening pipeline."""
     from app.database import DocumentRecord
     
@@ -120,14 +134,15 @@ def screen_document(document_id: int, file_path: str, document_type: str, db: Se
     # Module 3: Tampering Detection
     tampering_result = tampering_detector.detect_tampering(file_path)
     
-    # Module 4: Face Verification (if live photo provided later)
-    face_result = face_verifier.verify_faces(file_path, file_path) if False else None
-    if face_result is None:
+    # Module 4: Compare the document portrait to an optional live capture.
+    if live_photo_path:
+        face_result = face_verifier.verify_faces(file_path, live_photo_path)
+    else:
         from app.models.schemas import FaceMatchResult
         face_result = FaceMatchResult(
-            score=50.0,  # Neutral when no comparison available
-            match=True,  # Default to match when no live photo
-            confidence=50.0
+            score=0.0,
+            match=None,
+            confidence=0.0,
         )
     
     # Risk Assessment

@@ -20,10 +20,12 @@ export interface ScreenResponse {
 
 export async function screenDocument(
   documentType: string,
-  file: File
+  file: File,
+  livePhoto?: File | null
 ): Promise<ScreenResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  if (livePhoto) formData.append("live_photo", livePhoto);
   return request<ScreenResponse>(
     `/api/screening/documents?document_type=${documentType}`,
     { method: "POST", body: formData }

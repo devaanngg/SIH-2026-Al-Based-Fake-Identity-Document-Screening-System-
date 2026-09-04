@@ -42,9 +42,13 @@ class RiskScorer:
         
         validation_contribution = validation_score * validation_weight
         
-        # Face match contribution
+        # Face verification only contributes when a live image was supplied.
+        # A missing comparison must not be presented as either a match or failure.
         face_weight = 0.3
-        if face_match.match:
+        if face_match.match is None:
+            face_score = 5
+            face_factors = ["Face verification not performed (no live image supplied)"]
+        elif face_match.match:
             face_score = 5  # Low risk when faces match
             face_factors = [f"Face matched (similarity: {face_match.score:.1f}%)"]
         else:

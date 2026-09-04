@@ -42,7 +42,7 @@ class TamperingResult(BaseModel):
 
 class FaceMatchResult(BaseModel):
     score: float
-    match: bool
+    match: Optional[bool] = None
     confidence: float
 
 
@@ -75,7 +75,7 @@ class DocumentRecordResponse(BaseModel):
     tampering_score: float
     has_tampering: bool
     face_match_score: float
-    face_match: bool
+    face_match: Optional[bool] = None
     risk_score: float
     risk_level: Optional[str] = None
     status: str

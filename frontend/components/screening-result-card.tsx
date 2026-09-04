@@ -93,7 +93,9 @@ export function ScreeningResultCard({ record }: { record: DocumentRecord }) {
           <div className="rounded border p-3">
             <div className="text-xs text-muted-foreground">Face Match</div>
             <div className="mt-1 font-semibold">
-              {record.face_match ? (
+              {record.face_match === null ? (
+                <span className="text-muted-foreground">Not performed</span>
+              ) : record.face_match ? (
                 <span className="text-emerald-600">Match</span>
               ) : (
                 <span className="text-red-500">No match</span>

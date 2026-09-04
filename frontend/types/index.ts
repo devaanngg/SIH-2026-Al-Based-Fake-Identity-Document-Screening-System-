@@ -26,7 +26,7 @@ export interface DocumentRecord {
   tampering_score: number;
   has_tampering: boolean;
   face_match_score: number;
-  face_match: boolean;
+  face_match: boolean | null;
   risk_score: number;
   risk_level: RiskLevel | null;
   status: "screening" | "cleared" | "flagged" | "review" | "approved" | "rejected";
